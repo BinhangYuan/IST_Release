@@ -109,43 +109,46 @@ def push_model_to_parameter_server(args, partitioned_model, raw_model=None):
         dist.gather(tensor=partitioned_model.bn1.bias.data, gather_list=[], dst=0)
 
 
-def train(args, partitioned_model, raw_model, optimizer, data_set, epoch, train_time_log):
+def train(args, partitioned_model, raw_model, optimizer, train_loader, epoch, train_time_log):
     start_time = time.time()
     partitioned_model.train()
     if args.rank == 0:
         raw_model.train()
     i = 0
-    shuffle(data_set)
-    for data, target in data_set[:max(args.repartition_iter, len(data_set)//args.world_size)]:
-        if i % args.repartition_iter == 0:
-            if args.rank == 0:
-                dispatch_model_to_workers(args, partitioned_model, raw_model)
-            else:
-                dispatch_model_to_workers(args, partitioned_model)
-        optimizer.zero_grad()
-        output = partitioned_model(data)
-        loss = nn.functional.nll_loss(output, target)
-        loss.backward()
-        optimizer.step()  # This will just update the local data which reduces communication overhead.
-        i += 1
-        train_pred = output.max(1, keepdim=True)[1]  # get the index of the max log-probability
-        train_correct = train_pred.eq(target.view_as(train_pred)).sum().item()
-        if i % args.log_interval == 0:
-            print('Train Epoch {} iter {} <Loss: {:.6f}, Accuracy: {:.2f}%>'.format(
-                epoch, i, loss.item(), 100. * train_correct / target.shape[0]))
-        if i % args.repartition_iter == 0 or i == len(data_set):
-            if args.rank == 0:
-                push_model_to_parameter_server(args, partitioned_model, raw_model)
-                raw_model.flush()
-            else:
-                push_model_to_parameter_server(args, partitioned_model)
+    for i, batch in enumerate(train_loader):
+        if i < len(train_loader) // args.world_size:
+            if i % args.repartition_iter == 0:
+                if args.rank == 0:
+                    dispatch_model_to_workers(args, partitioned_model, raw_model)
+                else:
+                    dispatch_model_to_workers(args, partitioned_model)
+            data, target = batch['wav'].float(), batch['label']
+            optimizer.zero_grad()
+            output = partitioned_model(data)
+            loss = nn.functional.nll_loss(output, target)
+            loss.backward()
+            optimizer.step()  # This will just update the local data which reduces communication overhead.
+            i += 1
+            train_pred = output.max(1, keepdim=True)[1]  # get the index of the max log-probability
+            train_correct = train_pred.eq(target.view_as(train_pred)).sum().item()
+            if i % args.log_interval == 0:
+                print('Train Epoch {} iter {} <Loss: {:.6f}, Accuracy: {:.2f}%>'.format(
+                    epoch, i, loss.item(), 100. * train_correct / target.shape[0]))
+            if (i + 1) % args.repartition_iter == 0 or i == len(train_loader) // args.world_size:
+                if args.rank == 0:
+                    push_model_to_parameter_server(args, partitioned_model, raw_model)
+                    raw_model.flush()
+                else:
+                    push_model_to_parameter_server(args, partitioned_model)
+        else:
+            break
     end_time = time.time()
     elapsed_time = end_time - start_time
     print('Node {}: Train Epoch {} total time {:3.2f}s'.format(args.rank, epoch, elapsed_time))
     train_time_log[epoch-1] = elapsed_time
 
 
-def test(args, raw_model, test_set, epoch, test_loss_log, test_acc_log):
+def test(args, raw_model, test_loader, epoch, test_loss_log, test_acc_log):
     # currently only do test on rank0 node.
     assert(args.rank == 0)
     raw_model.eval()
@@ -153,7 +156,8 @@ def test(args, raw_model, test_set, epoch, test_loss_log, test_acc_log):
     test_correct = 0
     test_total = 0
     with torch.no_grad():
-        for data, target in test_set:
+        for i, batch in enumerate(test_loader):
+            data, target = batch['wav'].float(), batch['label']
             output = raw_model(data)
             test_loss += nn.functional.nll_loss(output, target, reduction='sum').item()  # sum up batch loss
             test_pred = output.max(1, keepdim=True)[1]  # get the index of the max log-probability
