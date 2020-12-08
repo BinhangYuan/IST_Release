@@ -8,3 +8,9 @@ Two implementations are provided:
 
 
 - Distributed Parameter Server.
+
+If you use AWS deep learning AMI, you can follow the instructions below:
+
+`` source activate pytorch_p36 ``
+
+`` ``

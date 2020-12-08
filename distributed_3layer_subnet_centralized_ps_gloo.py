@@ -225,15 +225,15 @@ def test(args, raw_model, train_set, test_set, epoch, test_loss_log, test_acc_lo
 def worker_process(args):
     assert(args.rank != 0)
     dist.init_process_group(backend=args.dist_backend, init_method=args.dist_url,
-                            rank=args.rank, world_size=args.partition_group)
+                            rank=args.rank, world_size=args.world_size)
     device = torch.device('cpu')
     train_set = speech_dataset.train_dataset()
     train_loader = DataLoader(train_set, batch_size=args.batch_size, shuffle=True, num_workers=4, pin_memory=True,
                               drop_last=True)
     partitioned_model = DNNGoogleSpeechBatchNorm3Layer(partition_num=1,
-                                                       model_size=args.model_size // args.partition_group).to(device)
+                                                       model_size=args.model_size // args.world_size).to(device)
     optimizer = torch.optim.SGD(partitioned_model.parameters(), lr=args.lr)
-    epochs = args.epochs * args.partition_group
+    epochs = args.epochs * args.world_size
     train_time_log = np.zeros(epochs)
     for epoch in range(1, epochs + 1):
         train(args, partitioned_model, None, optimizer, train_loader, epoch, train_time_log)
@@ -242,7 +242,7 @@ def worker_process(args):
 def parameter_server_process(args):
     assert (args.rank == 0)
     dist.init_process_group(backend=args.dist_backend, init_method=args.dist_url,
-                            rank=args.rank, world_size=args.partition_group)
+                            rank=args.rank, world_size=args.world_size)
     device = torch.device('cpu')
     train_set = speech_dataset.train_dataset()
     test_set = speech_dataset.test_dataset()
@@ -251,14 +251,14 @@ def parameter_server_process(args):
     test_loader = DataLoader(test_set, batch_size=args.batch_size, shuffle=True, num_workers=4, pin_memory=True,
                              drop_last=False)
     model_name = 'DNN_speech_3_layer_BN_' + str(args.epochs) + '_' + str(args.model_size) \
-                 + '_cascaded_' + str(args.partition_group) + '_' + str(args.repartition_iter)
+                 + '_cascaded_' + str(args.world_size) + '_' + str(args.repartition_iter)
     print("we are going to train from scratch.")
-    raw_model = DNNGoogleSpeechBatchNorm3Layer(partition_num=args.partition_group,
+    raw_model = DNNGoogleSpeechBatchNorm3Layer(partition_num=args.world_size,
                                                model_size=args.model_size).to(device)
     partitioned_model = DNNGoogleSpeechBatchNorm3Layer(partition_num=1,
-                                                       model_size=args.model_size//args.partition_group).to(device)
+                                                       model_size=args.model_size//args.world_size).to(device)
     optimizer = torch.optim.SGD(partitioned_model.parameters(), lr=args.lr)
-    epochs = args.epochs * args.partition_group
+    epochs = args.epochs * args.world_size
     train_time_log = np.zeros(epochs)
     test_loss_log = np.zeros(epochs)
     test_acc_log = np.zeros(epochs)
