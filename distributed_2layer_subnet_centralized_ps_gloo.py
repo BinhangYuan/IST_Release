@@ -122,6 +122,7 @@ def train(args, partitioned_model, raw_model, optimizer, train_loader, epoch, tr
                 else:
                     dispatch_model_to_workers(args, partitioned_model)
             data, target = batch['wav'].float(), batch['label']
+            print(data, target)
             optimizer.zero_grad()
             output = partitioned_model(data)
             loss = nn.functional.nll_loss(output, target)
