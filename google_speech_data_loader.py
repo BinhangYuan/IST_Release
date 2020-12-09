@@ -121,7 +121,7 @@ class GoogleSpeechDataset(Dataset):
 
     def __getitem__(self, index):
         if self.load_cached:
-            return {'wav': self.buffer_x[i], 'label': self.buffer_y[i]}
+            return {'wav': self.buffer_x[index], 'label': self.buffer_y[index]}
         else:
             return self.buffer[index]
 
