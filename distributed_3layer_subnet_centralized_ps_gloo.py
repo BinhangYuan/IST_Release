@@ -252,7 +252,7 @@ def parameter_server_process(args):
     test_acc_log = np.zeros(epochs)
     for epoch in range(1, epochs + 1):
         train(args, partitioned_model, raw_model, optimizer, train_loader, epoch, train_time_log)
-        test(args, raw_model, train_loader, test_loader, epoch, test_loss_log, test_acc_log)
+        test(args, raw_model, test_loader, epoch, test_loss_log, test_acc_log)
     np.savetxt('./log/' + model_name + '_train_time.log', train_time_log, fmt='%1.4f', newline=' ')
     np.savetxt('./log/' + model_name + '_test_loss.log', test_loss_log, fmt='%1.4f', newline=' ')
     np.savetxt('./log/' + model_name + '_test_acc.log', test_acc_log, fmt='%1.4f', newline=' ')
