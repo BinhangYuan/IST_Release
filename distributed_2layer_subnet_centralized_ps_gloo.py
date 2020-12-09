@@ -155,7 +155,7 @@ def test(args, raw_model, test_loader, epoch, test_loss_log, test_acc_log):
     test_correct = 0
     test_total = 0
     with torch.no_grad():
-        for i, batch in enumerate(test_loader):
+        for _, batch in enumerate(test_loader):
             data, target = batch['wav'].float(), batch['label']
             output = raw_model(data)
             test_loss += nn.functional.nll_loss(output, target, reduction='sum').item()  # sum up batch loss

@@ -365,7 +365,9 @@ def sync_test_results(args, test_loss, test_correct, test_total):
         return None, None
 
 
-def test(args, model_ps, model_prime, test_loader, epoch, test_loss_log, test_acc_log):
+def test(args, model_ps: DNNGoogleSpeechBatchNorm3LayerPS,
+         model_prime: DNNGoogleSpeechBatchNorm3LayerModel,
+         test_loader, epoch, test_loss_log, test_acc_log):
     # Do validation on every node in cluster.
     dispatch_model_for_validation(args, model_prime, model_ps)
     model_prime.update_model_from_buffer()

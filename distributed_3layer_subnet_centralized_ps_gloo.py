@@ -188,27 +188,16 @@ def train(args, partitioned_model, raw_model, optimizer, train_loader, epoch, tr
     train_time_log[epoch-1] = elapsed_time
 
 
-def test(args, raw_model, train_set, test_set, epoch, test_loss_log, test_acc_log):
+def test(args, raw_model, test_loader, epoch, test_loss_log, test_acc_log):
     # currently only do test on rank0 node.
     assert(args.rank == 0)
     raw_model.eval()
-    train_loss = 0.0
-    train_correct = 0
-    train_total = 0
     test_loss = 0.0
     test_correct = 0
     test_total = 0
     with torch.no_grad():
-        for data, target in train_set:
-            output = raw_model(data)
-            train_loss += nn.functional.nll_loss(output, target, reduction='sum').item()  # sum up batch loss
-            train_pred = output.max(1, keepdim=True)[1]  # get the index of the max log-probability
-            train_correct += train_pred.eq(target.view_as(train_pred)).sum().item()
-            train_total += target.shape[0]
-        train_acc = float(train_correct) / float(train_total)
-        train_loss /= float(train_total)
-
-        for data, target in test_set:
+        for _, batch in enumerate(test_loader):
+            data, target = batch['wav'].float(), batch['label']
             output = raw_model(data)
             test_loss += nn.functional.nll_loss(output, target, reduction='sum').item()  # sum up batch loss
             test_pred = output.max(1, keepdim=True)[1]  # get the index of the max log-probability
@@ -216,7 +205,6 @@ def test(args, raw_model, train_set, test_set, epoch, test_loss_log, test_acc_lo
             test_total += target.shape[0]
         test_acc = float(test_correct) / float(test_total)
         test_loss /= float(test_total)
-    print("Epoch {} Train Loss: {:.6f}; Train Accuracy: {:.2f}.".format(epoch, train_loss, train_acc))
     print("Epoch {} Test Loss: {:.6f}; Test Accuracy: {:.2f}.\n".format(epoch, test_loss, test_acc))
     test_loss_log[epoch - 1] = test_loss
     test_acc_log[epoch - 1] = test_acc
