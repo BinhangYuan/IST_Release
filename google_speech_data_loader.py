@@ -88,7 +88,6 @@ def pre_processing_dataset(data_path='./data_speech_commands_v0.02/', transform=
 
 class GoogleSpeechDataset(Dataset):
     def __init__(self, input_file, root_dir, transform=None, load_cached=False):
-        self.wav_frame = pd.read_csv(input_file)
         self.root_dir = root_dir
         self.transform = transform
         self.load_cached = load_cached
@@ -98,6 +97,7 @@ class GoogleSpeechDataset(Dataset):
             self.buffer_x = np.load(input_file+'_x.npy')
             self.buffer_y = np.load(input_file + '_y.npy')
         else:
+            self.wav_frame = pd.read_csv(input_file)
             self.buffer = []
             for index in tqdm(range(len(self.wav_frame))):
                 wav_name = os.path.join(self.root_dir, self.wav_frame.iloc[index, 0])
