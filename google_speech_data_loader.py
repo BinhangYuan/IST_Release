@@ -66,7 +66,7 @@ def pre_processing_dataset(data_path='./data_speech_commands_v0.02/', transform=
             sample = transform(sample)
         train_buffer_x.append(sample)
         train_buffer_y.append(wanted_words_to_class[train_df.iloc[index, 1]])
-    train_x = np.concatenate(train_buffer_x, axis=0)
+    train_x = np.stack(train_buffer_x, axis=0)
     train_y = np.array(train_buffer_y)
     np.save(data_path+'train_x.npy', train_x)
     np.save(data_path+'train_y.npy', train_y)
