@@ -114,7 +114,6 @@ def train(args, partitioned_model, raw_model, optimizer, train_loader, epoch, tr
     partitioned_model.train()
     if args.rank == 0:
         raw_model.train()
-    i = 0
     for i, batch in enumerate(train_loader):
         if i < len(train_loader) // args.world_size:
             if i % args.repartition_iter == 0:
@@ -123,6 +122,7 @@ def train(args, partitioned_model, raw_model, optimizer, train_loader, epoch, tr
                 else:
                     dispatch_model_to_workers(args, partitioned_model)
             data, target = batch['wav'].float(), batch['label']
+            print(data.shape)
             optimizer.zero_grad()
             output = partitioned_model(data)
             loss = nn.functional.nll_loss(output, target)
