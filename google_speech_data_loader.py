@@ -94,8 +94,10 @@ class GoogleSpeechDataset(Dataset):
         print('Pin google speech recognition dataset in the RAM.')
         start_time = time.time()
         if load_cached:
-            self.buffer_x = np.load(input_file+'_x.npy')
+            self.buffer_x = np.load(input_file + '_x.npy')
             self.buffer_y = np.load(input_file + '_y.npy')
+            print('X shape:', self.buffer_x.shape)
+            print('Y shape:', self.buffer_y.shape)
         else:
             self.wav_frame = pd.read_csv(input_file)
             self.buffer = []
