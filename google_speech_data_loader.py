@@ -87,7 +87,7 @@ def pre_processing_dataset(data_path='./data_speech_commands_v0.02/', transform=
 
 
 class GoogleSpeechDataset(Dataset):
-    def __init__(self, input_file, root_dir, transform=None, load_cached=False):
+    def __init__(self, input_file, root_dir, transform=None, load_cached=True):
         self.root_dir = root_dir
         self.transform = transform
         self.load_cached = load_cached
@@ -112,7 +112,10 @@ class GoogleSpeechDataset(Dataset):
         print('Data loading is done. Takes {:3.2f}s.'.format(elapsed_time))
 
     def __len__(self):
-        return len(self.buffer)
+        if self.load_cached:
+            return len(self.buffer_x)
+        else:
+            return len(self.buffer)
 
     def __getitem__(self, index):
         if self.load_cached:
